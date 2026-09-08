@@ -70,6 +70,8 @@ same machine, not the browser's machine), and start asking questions.
 - "Are there any TODO comments left in the code?"
 - "Walk me through how [some feature] works."
 
+For a deeper look at the agent loop, the tool definitions, the API contract, and the design decisions behind them, see [DOCUMENTATION.md](./DOCUMENTATION.md).
+
 ## Notes on scope
 
 This is a portfolio/learning project, not a production tool — a few deliberate
