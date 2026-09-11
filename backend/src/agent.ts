@@ -59,7 +59,7 @@ export async function runAgent(
     const toolUseBlocks = response.content.filter((b) => b.type === "tool_use");
     const toolResults: ContentBlock[] = [];
     for (const block of toolUseBlocks) {
-      const result = executeTool(block.name!, block.input, repoRoot);
+      const result = await executeTool(block.name!, block.input, repoRoot);
       toolLog.push({ name: block.name!, input: block.input, result });
       toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
     }

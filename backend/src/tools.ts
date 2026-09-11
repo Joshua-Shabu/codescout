@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { semanticSearch } from "./vectorIndex";
 
 // Directories we never want to walk into when listing/searching — keeps
 // the agent from burning its whole context on dependency trees.
@@ -86,6 +87,23 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["query"],
     },
   },
+  {
+    name: "semantic_search",
+    description:
+      "Search the codebase by meaning rather than exact text. Use this when the " +
+      "user's question is conceptual (e.g. 'where do we handle retries?', 'how is " +
+      "the user session validated?') and a literal grep in search_code wouldn't " +
+      "reliably find the relevant code. Returns the most relevant file chunks with " +
+      "their file path and line range.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "A natural-language description of what to find." },
+        top_k: { type: "number", description: "How many chunks to return (default 5)." },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 function listDirectory(repoRoot: string, input: { path: string }): string {
@@ -154,7 +172,18 @@ function searchCode(repoRoot: string, input: { query: string; file_extension?: s
   return matches.length ? matches.join("\n") : "(no matches found)";
 }
 
-export function executeTool(name: string, input: any, repoRoot: string): string {
+async function semanticSearchTool(
+  repoRoot: string,
+  input: { query: string; top_k?: number }
+): Promise<string> {
+  const hits = await semanticSearch(repoRoot, input.query, input.top_k ?? 5);
+  if (!hits.length) return "(no matches found)";
+  return hits
+    .map((h) => `${h.filePath}:${h.startLine}-${h.endLine} (score ${h.score.toFixed(3)})\n${h.text}`)
+    .join("\n\n---\n\n");
+}
+
+export async function executeTool(name: string, input: any, repoRoot: string): Promise<string> {
   try {
     switch (name) {
       case "list_directory":
@@ -163,6 +192,8 @@ export function executeTool(name: string, input: any, repoRoot: string): string 
         return readFile(repoRoot, input);
       case "search_code":
         return searchCode(repoRoot, input);
+      case "semantic_search":
+        return await semanticSearchTool(repoRoot, input);
       default:
         return `Unknown tool: ${name}`;
     }
